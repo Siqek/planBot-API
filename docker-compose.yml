@@ -1,0 +1,51 @@
+version: '3'
+services:
+  db:
+    image: mysql
+    container_name: mysql-planbot-api
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_HOST=% # allows the root user to connect from any host
+    ports:
+      - 3306:3306
+    restart: always
+    networks:
+      - mynetwork
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin-planbot-api
+    environment:
+      # - PMA_HOST=${IP}
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD=${DB_PASSWORD}
+    ports:
+      - 8081:80
+    restart: always
+    networks:
+      - mynetwork
+    depends_on:
+      - db
+   
+  app:
+    image: planbot-api:0.1.0 # for testing it can be: 'build: .'
+    # build: .
+    container_name: planbot-api
+    environment:
+      - url=${url}
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - mynetwork
+    depends_on:
+      - db
+
+volumes:
+  db:
+
+networks:
+  mynetwork:
