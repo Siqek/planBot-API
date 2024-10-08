@@ -5,8 +5,7 @@ const app = express();
 
 const port = 8080;
 
-require('dotenv').config({ path: `${__dirname}\\..\\.env`});
-// require('dotenv').config();
+require('dotenv').config({ path: `${__dirname}\\..\\.env` });
 
 var con = mysql.createConnection({
     host: 'db',
@@ -16,7 +15,6 @@ var con = mysql.createConnection({
 
 function connectToDB ()
 {
-    console.log(process.env.dbip)
     return new Promise((resolve, reject) => {
         con.connect((err) => {
         if (err) {
@@ -57,7 +55,7 @@ async function startServer () {
 
     console.log("Started reading the timetables");
     await parser.initParser();
-    console.log(`generation data: '${parser.getTimeTableGenerationData()}'`);
+    console.log(`Timetable generation data: '${parser.getTimeTableGenerationData()}'`);
     await parser.createTimeTables();
     console.log("Succesfully read and created the timetables");
 

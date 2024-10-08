@@ -7,7 +7,6 @@ services:
       - db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_HOST=% # allows the root user to connect from any host
     ports:
       - 3306:3306
     restart: always
@@ -18,7 +17,6 @@ services:
     image: phpmyadmin
     container_name: phpmyadmin-planbot-api
     environment:
-      # - PMA_HOST=${IP}
       - PMA_HOST=db
       - PMA_USER=root
       - PMA_PASSWORD=${DB_PASSWORD}
@@ -31,11 +29,11 @@ services:
       - db
    
   app:
-    image: planbot-api:0.1.0 # for testing it can be: 'build: .'
-    # build: .
+    image: planbot-api:0.1.0
     container_name: planbot-api
     environment:
       - url=${url}
+      - DB_PASSWORD=${DB_PASSWORD}
     restart: always
     ports:
       - 8080:8080
