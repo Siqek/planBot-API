@@ -52,14 +52,55 @@ startServer().catch(err => {
 
 async function startServer () {
     await connectToDB();
+    try {
+        console.log("Started initializing the DB structure");
+        await initDatabaseStructure();
+        console.log("DB structure initialization complete", '\n');
+    } catch (err) {
+        console.error(err);
+        return;
+    };
 
     console.log("Started reading the timetables");
     await parser.initParser();
     console.log(`Timetable generation data: '${parser.getTimeTableGenerationData()}'`);
     await parser.createTimeTables();
-    console.log("Succesfully read and created the timetables");
+    console.log("Succesfully read and created the timetables", '\n');
 
     app.listen(port, async () => {
         console.log(`API works! Listening to port ${port}`)
     }); 
+};
+
+async function initDatabaseStructure () {
+    // create the database structure
+    try {
+        // create database: timetable
+        let sql = `CREATE DATABASE IF NOT EXISTS \`timetable\`;`;
+        await con.promise().query(sql);
+
+        //create table: app_config
+        sql = `CREATE TABLE IF NOT EXISTS \`timetable\`.\`app_config\` (
+            \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            \`key\`           VARCHAR(255)    NOT NULL UNIQUE,
+            \`value\`         TEXT            NOT NULL,
+            \`updated_at\`    TIMESTAMP       DEFAULT CURRENT_TIMESTAMP
+        );`;
+        await con.promise().query(sql);
+
+        //create table: timetable
+        sql = `CREATE TABLE IF NOT EXISTS \`timetable\`.\`timetable\` (
+            \`ID\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            \`teacher\`       VARCHAR(40)     NOT NULL,
+            \`teacherID\`     CHAR(2)         NOT NULL,
+            \`classes\`       VARCHAR(20)     NOT NULL,
+            \`subject\`       VARCHAR(20)     NOT NULL,
+            \`classroom\`     VARCHAR(20)     NOT NULL,
+            \`day_num\`       INT             NOT NULL,
+            \`lesson_num\`    INT             NOT NULL
+        );`;
+        await con.promise().query(sql);
+    } catch (err) {
+        throw err;
+    };
 };

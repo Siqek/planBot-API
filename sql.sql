@@ -1,5 +1,4 @@
 CREATE DATABASE IF NOT EXISTS `timetable`;
-USE `timetable`;
 CREATE TABLE IF NOT EXISTS `timetable`.`app_config` (
     `id`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
     `key`           VARCHAR(255)    NOT NULL UNIQUE,
@@ -18,6 +17,6 @@ CREATE TABLE IF NOT EXISTS `timetable`.`timetable` (
 );
 
 
--- INSERT INTO `t`(`col`, `col2`) VALUES (2,12)
+-- INSERT INTO `timetable`.`app_config` (`key`, `value`) VALUES (2,12)
 -- ON DUPLICATE KEY UPDATE
--- 	`col2` = VALUES(`col2`);
+--     `value` = VALUES(`value`);

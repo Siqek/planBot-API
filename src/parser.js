@@ -12,11 +12,11 @@ module.exports = class Parser
     // init functions
     async initParser ()
     {
-        const html = await this.#getHtml('/lista.html');
+        let html = await this.#getHtml('/lista.html');
         this.#urls = html.match(/plany\/n.*\.html/g); // finds all URLs to teachers' timetables
 
-        const html2 = await this.#getHtml(this.#urls[0]);
-        this.#timeTableGenerationData = html2.match(/(?<=wygenerowano\s*)\d{2}\.\d{2}\.\d{4}/)?.[0] || null; // finds generation date
+        html = await this.#getHtml(this.#urls[0]);
+        this.#timeTableGenerationData = html.match(/(?<=wygenerowano\s*)\d{2}\.\d{2}\.\d{4}/)?.[0] || null; // finds generation date
     };
 
 
