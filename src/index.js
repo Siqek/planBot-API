@@ -3,47 +3,22 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const app = express();
 
+const Parser = require('./parser');
+
 const port = 8080;
 
 require('dotenv').config({ path: `${__dirname}\\..\\.env` });
 
-var con = mysql.createConnection({
+let con = mysql.createConnection({
     host: 'db',
     user: 'root',
     password: `${process.env.DB_PASSWORD}`,
 });
 
-function connectToDB ()
-{
-    return new Promise((resolve, reject) => {
-        con.connect((err) => {
-        if (err) {
-            console.error(err);
-            reject(err);
-        }
-        else {
-            console.log('Connected to DB.');
-            resolve();
-        };
-        });
-    });
-};
-
-const Parser = require('./parser');
-const parser = new Parser();
-
 app.use(cors());
 
 app.get('/', (req, res) => {
     res.send("OK");
-});
-
-app.get('/test', (req, res) => {
-    res.send(parser.getTimeTables());
-});
-
-app.get('/broken', (req, res) => {
-    res.send(parser.getBrokenTimeTables());
 });
 
 startServer().catch(err => {
@@ -57,30 +32,62 @@ async function startServer () {
         await initDatabaseStructure();
         console.log("DB structure initialization complete", '\n');
     } catch (err) {
-        console.error(err);
+        console.error("Error while initializing the DB structure", err);
         return;
     };
 
-    console.log("Started reading the timetables");
+    const parser = new Parser();
     await parser.initParser();
-    console.log(`Timetable generation data: '${parser.getTimeTableGenerationData()}'`);
-    await parser.createTimeTables();
-    console.log("Succesfully read and created the timetables", '\n');
+    console.log('Parser initialized successfully', '\n');
+
+    let timetableGenerationDate = await getSetting('timetable_generation_date');
+    if (!timetableGenerationDate || new Date(timetableGenerationDate) < new Date(parser.getTimetableGenerationDate()))
+    {
+        setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
+    };
+
+    if (false) {
+        initDatabaseData();
+    };
+
+
+    // console.log("Started reading the timetables");
+    // console.log(`Timetable generation data: '${parser.getTimeTableGenerationData()}'`);
+    // console.log("Succesfully read and created the timetables", '\n');
 
     app.listen(port, async () => {
         console.log(`API works! Listening to port ${port}`)
     }); 
 };
 
+
+// database functions
+
+function connectToDB ()
+{
+    return new Promise((resolve, reject) => {
+        con.connect((err) => {
+            if (err) {
+                console.error(err);
+                reject(err);
+            }
+            else {
+                console.log('Connected to DB.');
+                resolve();
+            };
+        });
+    });
+};
+
 async function initDatabaseStructure () {
     // create the database structure
     try {
-        // create database: timetable
-        let sql = `CREATE DATABASE IF NOT EXISTS \`timetable\`;`;
+        // create database: planbot
+        let sql = `CREATE DATABASE IF NOT EXISTS \`planbot\`;`;
         await con.promise().query(sql);
 
-        //create table: app_config
-        sql = `CREATE TABLE IF NOT EXISTS \`timetable\`.\`app_config\` (
+        // create table: app_config
+        sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`app_config\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
             \`key\`           VARCHAR(255)    NOT NULL UNIQUE,
             \`value\`         TEXT            NOT NULL,
@@ -88,8 +95,8 @@ async function initDatabaseStructure () {
         );`;
         await con.promise().query(sql);
 
-        //create table: timetable
-        sql = `CREATE TABLE IF NOT EXISTS \`timetable\`.\`timetable\` (
+        // create table: timetable
+        sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`timetable\` (
             \`ID\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
             \`teacher\`       VARCHAR(40)     NOT NULL,
             \`teacherID\`     CHAR(2)         NOT NULL,
@@ -100,6 +107,45 @@ async function initDatabaseStructure () {
             \`lesson_num\`    INT             NOT NULL
         );`;
         await con.promise().query(sql);
+
+        // create table: broken_timetable
+        sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`broken_timetable\` (
+            \`ID\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            \`teacher\`       VARCHAR(40)     NOT NULL,
+            \`teacherID\`     CHAR(2)         NOT NULL,
+            \`data\`          VARCHAR(50)     NOT NULL,
+            \`day_num\`       INT             NOT NULL,
+            \`lesson_num\`    INT             NOT NULL
+        );`;
+        await con.promise().query(sql) ;
+    } catch (err) {
+        throw err;
+    };
+};
+
+async function initDatabaseData () {
+
+};
+
+async function setSetting (key, value) {
+    try {
+        // insert a setting, or update it if it already exists
+        const query = `INSERT INTO \`planbot\`.\`app_config\` (\`key\`, \`value\`) VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE
+            \`value\` = VALUES(\`value\`),
+            \`updated_at\` = CURRENT_TIMESTAMP;`;
+        await con.promise().query(query, [key, value]);
+    } catch (err) {
+        throw err;
+    };
+};
+
+async function getSetting (key) {
+    try {
+        // gets the setting value
+        const query = `SELECT \`value\` FROM \`planbot\`.\`app_config\` WHERE \`key\` = ?`;
+        const [ result, _ ] = await con.promise().query(query, [key]);
+        return result?.[0]?.value;
     } catch (err) {
         throw err;
     };

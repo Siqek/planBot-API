@@ -3,10 +3,10 @@ const parse5 = require('parse5');
 module.exports = class Parser
 {
     // private properties
-    #timeTables = [];
-    #brokenTimeTables = [];
+    #timetables = [];
+    #brokenTimetables = [];
     #urls = [];
-    #timeTableGenerationData = null;
+    #timetableGenerationDate = null;
 
 
     // init functions
@@ -16,7 +16,8 @@ module.exports = class Parser
         this.#urls = html.match(/plany\/n.*\.html/g); // finds all URLs to teachers' timetables
 
         html = await this.#getHtml(this.#urls[0]);
-        this.#timeTableGenerationData = html.match(/(?<=wygenerowano\s*)\d{2}\.\d{2}\.\d{4}/)?.[0] || null; // finds generation date
+        // finds generation date and formats it in the format: YYYY-MM-DD
+        this.#timetableGenerationDate = html.match(/(?<=wygenerowano\s*)(\d{2})\.(\d{2})\.(\d{4})/)?.slice(1).reverse().join('-') || null;
     };
 
 
@@ -24,31 +25,28 @@ module.exports = class Parser
     constructor () {
         
         // init vars
-        this.#timeTables = [];
-        this.#brokenTimeTables = []
+        this.#timetables = [];
+        this.#brokenTimetables = []
         this.#urls = [];
     };
 
 
     // accessors
-    getTimeTables ()
-    {
-        return this.#timeTables;
+    getTimetables () {
+        return this.#timetables;
     };
 
-    getBrokenTimeTables ()
-    {
-        return this.#brokenTimeTables;
+    getBrokenTimetables () {
+        return this.#brokenTimetables;
     };
 
-    getTimeTableGenerationData ()
-    {
-        return this.#timeTableGenerationData;
+    getTimetableGenerationDate () {
+        return this.#timetableGenerationDate;
     };
     
 
     // public methods
-    async createTimeTables ()
+    async createTimetables ()
     {
         // a way to avoid writing '.bind(this)' every time the function is called
         // const findTeacherName = _findTeacherName.bind(this);
@@ -71,15 +69,15 @@ module.exports = class Parser
                     continue;
 
                 if (parsedData.brokenData.length) {
-                    this.#brokenTimeTables.push({
+                    this.#brokenTimetables.push({
                         teacher: teacherName,
-                        brokenTimeTable: parsedData.brokenData
+                        brokenTimetable: parsedData.brokenData
                     });
                 };
 
-                this.#timeTables.push({
+                this.#timetables.push({
                     teacher: teacherName,
-                    timeTable: parsedData.result
+                    timetable: parsedData.result
                 });
     
                 console.log(`${teacherName}: ${parsedData.result.length}`);
