@@ -43,11 +43,14 @@ async function startServer () {
     let timetableGenerationDate = await getSetting('timetable_generation_date');
     if (!timetableGenerationDate || new Date(timetableGenerationDate) < new Date(parser.getTimetableGenerationDate()))
     {
-        setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
-    };
-
-    if (false) {
-        initDatabaseData();
+        try {
+            await parser.createTimetables();
+            await initDatabaseData();
+            await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
+        } catch (err) {
+            console.error("Error while updating the DB data", err);
+            return;
+        };
     };
 
 
@@ -97,9 +100,9 @@ async function initDatabaseStructure () {
 
         // create table: timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`timetable\` (
-            \`ID\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
             \`teacher\`       VARCHAR(40)     NOT NULL,
-            \`teacherID\`     CHAR(2)         NOT NULL,
+            \`teacher_id\`    CHAR(2)         NOT NULL,
             \`classes\`       VARCHAR(20)     NOT NULL,
             \`subject\`       VARCHAR(20)     NOT NULL,
             \`classroom\`     VARCHAR(20)     NOT NULL,
@@ -110,9 +113,9 @@ async function initDatabaseStructure () {
 
         // create table: broken_timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`broken_timetable\` (
-            \`ID\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
             \`teacher\`       VARCHAR(40)     NOT NULL,
-            \`teacherID\`     CHAR(2)         NOT NULL,
+            \`teacher_id\`    CHAR(2)         NOT NULL,
             \`data\`          VARCHAR(50)     NOT NULL,
             \`day_num\`       INT             NOT NULL,
             \`lesson_num\`    INT             NOT NULL
@@ -124,7 +127,31 @@ async function initDatabaseStructure () {
 };
 
 async function initDatabaseData () {
+    try {   
+        // truncate old data
+        let sql = `TRUNCATE \`planbot\`.\`broken_timetable\`;`;
+        await con.promise().query(sql);
 
+        sql = `TRUNCATE \`planbot\`.\`timetable\`;`;
+        await con.promise().query(sql);
+        
+        return;
+        sql = `INSERT INTO \`planbot\`.\`timetable\`
+            (\`teacher\`, \`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`) 
+            VALUES ?;`;
+        let values = [];
+
+        await con.promise().query(sql, [values], (err, result) => {
+            if (err) throw err;
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
+        });
+    } catch (err) {
+        throw err;
+    };
+
+//   con.query(sql, [values], function (err, result) {
+//     if (err) throw err;
+//     console.log("Number of records inserted: " + result.affectedRows);
 };
 
 async function setSetting (key, value) {

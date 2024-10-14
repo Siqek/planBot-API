@@ -1,10 +1,6 @@
 - check generation time -> update generation time in app_config -> update the entire timetable table
 - optimize the createTimeTables function
 
-- connect to database in createConnection instead of using its name every time
-
-- get application port from .env instead of declaring it statically
-
 - 'initDatabaseData' function
 
 
