@@ -1,7 +1,6 @@
-- check generation time -> update generation time in app_config -> update the entire timetable table
 - optimize the createTimeTables function
 
-- 'initDatabaseData' function
+- 'initDatabaseData' function - broken_data
 
 
 - sql-template-tag

@@ -80,7 +80,7 @@ module.exports = class Parser
                     timetable: parsedData.result
                 });
     
-                console.log(`${teacherName}: ${parsedData.result.length}`);
+                // console.log(`${teacherName}: ${parsedData.result.length}`); // DEBUG
             };
         };
 

@@ -45,8 +45,9 @@ async function startServer () {
     {
         try {
             await parser.createTimetables();
-            await initDatabaseData();
-            await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
+            await initDatabaseData([ parser.getTimetables(), parser.getBrokenTimetables() ]);
+            // uncomment it later DEBUG TODO
+            // await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
         } catch (err) {
             console.error("Error while updating the DB data", err);
             return;
@@ -101,11 +102,11 @@ async function initDatabaseStructure () {
         // create table: timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`timetable\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
-            \`teacher\`       VARCHAR(40)     NOT NULL,
+            \`teacher\`       VARCHAR(30)     NOT NULL,
             \`teacher_id\`    CHAR(2)         NOT NULL,
             \`classes\`       VARCHAR(20)     NOT NULL,
             \`subject\`       VARCHAR(20)     NOT NULL,
-            \`classroom\`     VARCHAR(20)     NOT NULL,
+            \`classroom\`     VARCHAR(10)     NOT NULL,
             \`day_num\`       INT             NOT NULL,
             \`lesson_num\`    INT             NOT NULL
         );`;
@@ -114,7 +115,7 @@ async function initDatabaseStructure () {
         // create table: broken_timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`broken_timetable\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
-            \`teacher\`       VARCHAR(40)     NOT NULL,
+            \`teacher\`       VARCHAR(30)     NOT NULL,
             \`teacher_id\`    CHAR(2)         NOT NULL,
             \`data\`          VARCHAR(50)     NOT NULL,
             \`day_num\`       INT             NOT NULL,
@@ -126,7 +127,8 @@ async function initDatabaseStructure () {
     };
 };
 
-async function initDatabaseData () {
+async function initDatabaseData ([ data, brokenData ]) {
+    // truncate old data and insert new
     try {   
         // truncate old data
         let sql = `TRUNCATE \`planbot\`.\`broken_timetable\`;`;
@@ -135,23 +137,42 @@ async function initDatabaseData () {
         sql = `TRUNCATE \`planbot\`.\`timetable\`;`;
         await con.promise().query(sql);
         
-        return;
+        // insert new data
         sql = `INSERT INTO \`planbot\`.\`timetable\`
             (\`teacher\`, \`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`) 
             VALUES ?;`;
         let values = [];
 
-        await con.promise().query(sql, [values], (err, result) => {
-            if (err) throw err;
-            console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
+        // prepare the data to insert
+        data.forEach(({ teacher, timetable }) => {
+            // gets the teacher's full name (format: initial.surname)
+            let teacherName = teacher.trim().split(' ')?.[0]; // cuts off everything after the name
+            // extracts teacher id (two letters in the brackets)
+            let teacherId = teacher.match(/.{2}(?=\))/)?.[0]; // matches the two letters in the brackets
+
+            timetable.forEach(({ class: className, subject, classroom, day, lesson }) => {
+                // the order must be the same as in the query
+                values.push([ teacherName, teacherId, className, subject, classroom, day, lesson ]);
+            });
         });
+
+        if (values.length) {
+            let [ result ] = await con.promise().query(sql, [values]);
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
+        };
+
+        sql = `INSERT INTO \`planbot\`.\`broken_timetable\`
+            (\`teacher\`, \`teacher_id\`, \`data\`, \`day_num\`, \`lesson_num\`)
+            VALUES ?;`;
+        values = [];
+
+        if (values.length) {
+            let [ result ] = await con.promise().query(sql, [values]);
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
+        };
     } catch (err) {
         throw err;
     };
-
-//   con.query(sql, [values], function (err, result) {
-//     if (err) throw err;
-//     console.log("Number of records inserted: " + result.affectedRows);
 };
 
 async function setSetting (key, value) {
@@ -171,8 +192,8 @@ async function getSetting (key) {
     try {
         // gets the setting value
         const query = `SELECT \`value\` FROM \`planbot\`.\`app_config\` WHERE \`key\` = ?`;
-        const [ result, _ ] = await con.promise().query(query, [key]);
-        return result?.[0]?.value;
+        const [ result ] = await con.promise().query(query, [key]);
+        return result[0]?.value || null;
     } catch (err) {
         throw err;
     };
