@@ -21,6 +21,26 @@ app.get('/', (req, res) => {
     res.send("OK");
 });
 
+app.get('/get', (req, res) => {
+    const teacher = req.query.teacher ?? '';
+    const className = req.query.class ?? '';
+    const classroom = req.query.classroom ?? '';
+    const lesson = req.query.lesson ?? '';
+    const day = req.query.day ?? '';
+    res.send(`${teacher} ${className} ${classroom} ${lesson} ${day}`);
+});
+
+app.get('/teachers', (req, res) => {
+    const sql = `SELECT DISTINCT \`teacher\`, \`teacher_id\` FROM \`planbot\`.\`timetable\`;`;
+    con.query(sql, (err, result, fields) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
 startServer().catch(err => {
     console.log("Error while starting the server: ", err);
 });
@@ -53,11 +73,6 @@ async function startServer () {
             return;
         };
     };
-
-
-    // console.log("Started reading the timetables");
-    // console.log(`Timetable generation data: '${parser.getTimeTableGenerationData()}'`);
-    // console.log("Succesfully read and created the timetables", '\n');
 
     app.listen(port, async () => {
         console.log(`API works! Listening to port ${port}`)
@@ -155,8 +170,9 @@ async function initDatabaseData ([ data, brokenData ]) {
                 values.push([ teacherName, teacherId, className, subject, classroom, day, lesson ]);
             });
         });
-
+    
         if (values.length) {
+            // inserts the data
             let [ result ] = await con.promise().query(sql, [values]);
             console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
         };
@@ -166,9 +182,21 @@ async function initDatabaseData ([ data, brokenData ]) {
             VALUES ?;`;
         values = [];
 
+        brokenData.forEach(({ teacher, brokenTimetable }) => {
+            // gets the teacher's full name (format: initial.surname)
+            let teacherName = teacher.trim().split(' ')?.[0]; // cuts off everything after the name
+            // extracts teacher id (two letters in the brackets)
+            let teacherId = teacher.match(/.{2}(?=\))/)?.[0]; // matches the two letters in the brackets
+
+            brokenTimetable.forEach(({ brokenData: data, day, lesson }) => {
+                // the order must be the same as in the query
+                values.push([ teacherName, teacherId, data, day, lesson ]);
+            });
+        });
+
         if (values.length) {
             let [ result ] = await con.promise().query(sql, [values]);
-            console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'broken_timetable' table`);
         };
     } catch (err) {
         throw err;

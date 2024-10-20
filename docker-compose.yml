@@ -7,11 +7,7 @@ services:
       - db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-    ports:
-      - 3306:3306
     restart: always
-    networks:
-      - mynetwork
 
   phpmyadmin:
     image: phpmyadmin
@@ -23,8 +19,6 @@ services:
     ports:
       - 8081:80
     restart: always
-    networks:
-      - mynetwork
     depends_on:
       - db
    
@@ -37,8 +31,6 @@ services:
     restart: always
     ports:
       - 8080:8080
-    networks:
-      - mynetwork
     depends_on:
       - db
 
