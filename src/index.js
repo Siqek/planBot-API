@@ -22,22 +22,33 @@ app.get('/', (req, res) => {
 });
 
 app.get('/get', (req, res) => {
-    const teacher = req.query.teacher ?? '';
-    const className = req.query.class ?? '';
-    const classroom = req.query.classroom ?? '';
-    const lesson = req.query.lesson ?? '';
-    const day = req.query.day ?? '';
+    const teacher = `%${req.query.teacher ?? ''}%`;
+    const className = `%${req.query.class ?? ''}%`;
+    const classroom = `%${req.query.classroom ?? ''}%`;
+    const lesson = req.query.lesson ?? '%';
+    const day = req.query.day ?? '%';
     res.send(`${teacher} ${className} ${classroom} ${lesson} ${day}`);
 });
 
 app.get('/teachers', (req, res) => {
-    const sql = `SELECT DISTINCT \`teacher\`, \`teacher_id\` FROM \`planbot\`.\`timetable\`;`;
-    con.query(sql, (err, result, fields) => {
+    const sql = `SELECT * FROM \`planbot\`.\`teachers\`;`;
+    con.query(sql, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
         } else {
             res.status(200).json(result);
-        }
+        };
+    });
+});
+
+app.get('/classrooms', (req, res) => {
+    const sql = `SELECT DISTINCT \`classroom\` FROM \`planbot\`.\`timetable\`;`;
+    con.query(sql, (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).json(result.map(r => r.classroom));
+        };
     });
 });
 
@@ -65,7 +76,7 @@ async function startServer () {
     {
         try {
             await parser.createTimetables();
-            await initDatabaseData([ parser.getTimetables(), parser.getBrokenTimetables() ]);
+            await initDatabaseData(parser.getTimetables(), parser.getBrokenTimetables());
             // uncomment it later DEBUG TODO
             // await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
         } catch (err) {
@@ -74,9 +85,7 @@ async function startServer () {
         };
     };
 
-    app.listen(port, async () => {
-        console.log(`API works! Listening to port ${port}`)
-    }); 
+    app.listen(port, () => console.log(`API works! Listening to port ${port}`)); 
 };
 
 
@@ -102,7 +111,7 @@ async function initDatabaseStructure () {
     // create the database structure
     try {
         // create database: planbot
-        let sql = `CREATE DATABASE IF NOT EXISTS \`planbot\`;`;
+        let sql = `CREATE DATABASE IF NOT EXISTS \`planbot\` COLLATE utf8mb4_bin;`;
         await con.promise().query(sql);
 
         // create table: app_config
@@ -114,10 +123,22 @@ async function initDatabaseStructure () {
         );`;
         await con.promise().query(sql);
 
+        // create table: teachers
+        sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`teachers\` (
+            \`teacher_id\`    CHAR(2)         PRIMARY KEY NOT NULL UNIQUE,
+            \`teacher_name\`  VARCHAR(30)     NOT NULL   
+        );`;
+        await con.promise().query(sql);
+
+        // create table: classes
+        sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`classes\` (
+            \`class\`         VARCHAR(4)      PRIMARY KEY NOT NULL UNIQUE
+        );`;
+        await con.promise().query(sql);
+        
         // create table: timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`timetable\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
-            \`teacher\`       VARCHAR(30)     NOT NULL,
             \`teacher_id\`    CHAR(2)         NOT NULL,
             \`classes\`       VARCHAR(20)     NOT NULL,
             \`subject\`       VARCHAR(20)     NOT NULL,
@@ -126,23 +147,23 @@ async function initDatabaseStructure () {
             \`lesson_num\`    INT             NOT NULL
         );`;
         await con.promise().query(sql);
+        // FOREIGN KEY (\`teacher_id\`) REFERENCES \`teachers\`(\`teacher_id\`)
 
         // create table: broken_timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`broken_timetable\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
-            \`teacher\`       VARCHAR(30)     NOT NULL,
             \`teacher_id\`    CHAR(2)         NOT NULL,
             \`data\`          VARCHAR(50)     NOT NULL,
             \`day_num\`       INT             NOT NULL,
             \`lesson_num\`    INT             NOT NULL
         );`;
-        await con.promise().query(sql) ;
+        await con.promise().query(sql);
     } catch (err) {
         throw err;
     };
 };
 
-async function initDatabaseData ([ data, brokenData ]) {
+async function initDatabaseData (data, brokenData) {
     // truncate old data and insert new
     try {   
         // truncate old data
@@ -151,46 +172,73 @@ async function initDatabaseData ([ data, brokenData ]) {
 
         sql = `TRUNCATE \`planbot\`.\`timetable\`;`;
         await con.promise().query(sql);
-        
-        // insert new data
-        sql = `INSERT INTO \`planbot\`.\`timetable\`
-            (\`teacher\`, \`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`) 
-            VALUES ?;`;
-        let values = [];
 
-        // prepare the data to insert
+        sql = `TRUNCATE \`planbot\`.\`teachers\`;`;
+        await con.promise().query(sql);
+
+        sql = `TRUNCATE \`planbot\`.\`classes\`;`;
+        await con.promise().query(sql);
+
+        // prepare new data to insert
+        let values = [];
+        let teachers = [];
+        let classesSet = new Set();
+
         data.forEach(({ teacher, timetable }) => {
             // gets the teacher's full name (format: initial.surname)
             let teacherName = teacher.trim().split(' ')?.[0]; // cuts off everything after the name
             // extracts teacher id (two letters in the brackets)
             let teacherId = teacher.match(/.{2}(?=\))/)?.[0]; // matches the two letters in the brackets
 
-            timetable.forEach(({ class: className, subject, classroom, day, lesson }) => {
+            teachers.push([ teacherId, teacherName ]);
+
+            timetable.forEach(({ classes, subject, classroom, day, lesson }) => {
+                classes.forEach(c => classesSet.add(c));
+
                 // the order must be the same as in the query
-                values.push([ teacherName, teacherId, className, subject, classroom, day, lesson ]);
+                values.push([ teacherId, classes.join(';'), subject, classroom, day, lesson ]);
             });
         });
-    
+
+        // insert teachers
+        sql = `INSERT INTO \`planbot\`.\`teachers\` (\`teacher_id\`, \`teacher_name\`)
+        VALUES ?;`;
+        if (teachers.length) {
+            // execute the query
+            let [ result ] = await con.promise().query(sql, [teachers]);
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'teachers' table`);
+        };
+
+        // insert the data
+        sql = `INSERT INTO \`planbot\`.\`timetable\`
+        (\`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`) 
+        VALUES ?;`;
         if (values.length) {
-            // inserts the data
             let [ result ] = await con.promise().query(sql, [values]);
             console.log(`Successfully inserted ${result.affectedRows} rows into the 'timetable' table`);
         };
 
+        // insert classes
+        sql = `INSERT INTO \`planbot\`.\`classes\`
+        (\`class\`) VALUES ?;`;
+        if (classesSet.size) {
+            let classes = [...classesSet].map(c => [c]);
+            let [ result ] = await con.promise().query(sql, [classes]);
+            console.log(`Successfully inserted ${result.affectedRows} rows into the 'classes' table`);
+        };
+
         sql = `INSERT INTO \`planbot\`.\`broken_timetable\`
-            (\`teacher\`, \`teacher_id\`, \`data\`, \`day_num\`, \`lesson_num\`)
-            VALUES ?;`;
+        (\`teacher_id\`, \`data\`, \`day_num\`, \`lesson_num\`)
+        VALUES ?;`;
         values = [];
 
         brokenData.forEach(({ teacher, brokenTimetable }) => {
-            // gets the teacher's full name (format: initial.surname)
-            let teacherName = teacher.trim().split(' ')?.[0]; // cuts off everything after the name
             // extracts teacher id (two letters in the brackets)
             let teacherId = teacher.match(/.{2}(?=\))/)?.[0]; // matches the two letters in the brackets
 
             brokenTimetable.forEach(({ brokenData: data, day, lesson }) => {
                 // the order must be the same as in the query
-                values.push([ teacherName, teacherId, data, day, lesson ]);
+                values.push([ teacherId, data, day, lesson ]);
             });
         });
 

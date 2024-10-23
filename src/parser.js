@@ -131,8 +131,7 @@ module.exports = class Parser
         
             function parseTd(node)
             {
-                var result = {};
-                // let classes = [];
+                let result = {};
     
                 // finds and handles specific elements
                 for (let child of node.childNodes)
@@ -142,8 +141,10 @@ module.exports = class Parser
                         return parseTd(child);
         
                     // class
-                    if (child.tagName == 'a' && child.attrs && child.attrs.some(a => a.name == 'class' && a.value == 'o'))
-                        result.class = result.class ? `${result.class} ${child.childNodes[0].value}` : child.childNodes[0].value;
+                    if (child.tagName == 'a' && child.attrs && child.attrs.some(a => a.name == 'class' && a.value == 'o')) {
+                        if (!result.classes) result.classes = [];
+                        result.classes.push(child.childNodes[0].value);
+                    };
         
                     // classroom
                     if ((child.tagName == 'a' || child.tagName == 'span') && child.attrs && child.attrs.some(a => a.name == 'class' && a.value == 's'))
@@ -167,11 +168,8 @@ module.exports = class Parser
                     delete result.brokenData;
 
                 // there is no data
-                if (!Object.keys(result).length)
-                    return;
-
-                // result.class = classes.join(' ');
-                return result;
+                if (Object.keys(result).length)
+                    return result;
             };
         };
     };

@@ -1,6 +1,5 @@
 - optimize the createTimeTables function
 
-- 'initDatabaseData' function - broken_data
-
+- endpoints
 
 - sql-template-tag
