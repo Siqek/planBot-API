@@ -21,13 +21,19 @@ app.get('/', (req, res) => {
     res.send("OK");
 });
 
-app.get('/get', (req, res) => {
-    const teacher = `%${req.query.teacher ?? ''}%`;
-    const className = `%${req.query.class ?? ''}%`;
-    const classroom = `%${req.query.classroom ?? ''}%`;
-    const lesson = req.query.lesson ?? '%';
-    const day = req.query.day ?? '%';
-    res.send(`${teacher} ${className} ${classroom} ${lesson} ${day}`);
+app.get('/lesson', (req, res) => {
+    // get one lesson
+    res.status(200).send('ok');
+});
+
+app.get('/lesson/next-available', (req, res) => {
+    // get next available lesson
+    res.status(200).send('ok') ;
+});
+
+app.get('/day', (req, res) => {
+    // get all day
+    res.status(200).send('ok');
 });
 
 app.get('/teachers', (req, res) => {
@@ -37,6 +43,17 @@ app.get('/teachers', (req, res) => {
             res.status(500).json({ error: 'Internal server error' });
         } else {
             res.status(200).json(result);
+        };
+    });
+});
+
+app.get('/classes', (req, res) => {
+    const sql = `SELECT \`class\` FROM \`planbot\`.\`classes\`;`;
+    con.query(sql, (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).json(result.map(r => r.class));
         };
     });
 });
@@ -125,8 +142,8 @@ async function initDatabaseStructure () {
 
         // create table: teachers
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`teachers\` (
-            \`teacher_id\`    CHAR(2)         PRIMARY KEY NOT NULL UNIQUE,
-            \`teacher_name\`  VARCHAR(30)     NOT NULL   
+            \`id\`            CHAR(2)         PRIMARY KEY NOT NULL UNIQUE,
+            \`name\`          VARCHAR(30)     NOT NULL   
         );`;
         await con.promise().query(sql);
 
@@ -147,7 +164,6 @@ async function initDatabaseStructure () {
             \`lesson_num\`    INT             NOT NULL
         );`;
         await con.promise().query(sql);
-        // FOREIGN KEY (\`teacher_id\`) REFERENCES \`teachers\`(\`teacher_id\`)
 
         // create table: broken_timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`broken_timetable\` (
@@ -201,7 +217,7 @@ async function initDatabaseData (data, brokenData) {
         });
 
         // insert teachers
-        sql = `INSERT INTO \`planbot\`.\`teachers\` (\`teacher_id\`, \`teacher_name\`)
+        sql = `INSERT INTO \`planbot\`.\`teachers\` (\`id\`, \`name\`)
         VALUES ?;`;
         if (teachers.length) {
             // execute the query
