@@ -22,18 +22,86 @@ app.get('/', (req, res) => {
 });
 
 app.get('/lesson', (req, res) => {
-    // get one lesson
-    res.status(200).send('ok');
+    const day = req.query.day;
+    const lesson = req.query.lesson;
+    const teacher = req.query.teacher ?? '';
+    const classes = req.query.classes ?? '';
+    const classroom = req.query.classroom ?? '';
+
+    if (!day) {
+        res.status(400).send({ error: "Missing required parameter: 'day'"});
+        return;
+    };
+
+    if (!lesson) {
+        res.status(400).send({ error: "Missing required parameter: 'lesson'"});
+        return;
+    };
+
+    const sql = `SELECT timetable.teacher_id, teachers.name AS teacher_name, subject, classes, classroom, day_num, lesson_num
+    FROM planbot.timetable
+    JOIN planbot.teachers ON timetable.teacher_id = teachers.id
+    WHERE
+        day_num = ?
+        AND lesson_num = ?
+        AND (
+            LOWER(teacher_id) LIKE CONCAT('%', LOWER(?), '%') 
+            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(?), '%')
+        )
+        AND LOWER(classes) LIKE CONCAT('%', LOWER(?), '%')
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(?), '%');`;
+    con.query(sql, [day, lesson, teacher, teacher, classes, classroom], (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).send(result);
+        };
+    });
 });
 
 app.get('/lesson/next-available', (req, res) => {
-    // get next available lesson
-    res.status(200).send('ok') ;
+    // const day = req.query.day;
+    // const lesson = req.query.lesson;
+    // const sql = `SELECT * 
+    // FROM timetable
+    // JOIN teachers ON timetable.teacher_id = teachers.id
+    // WHERE teacher_id = '' AND ((lesson_num >= '' AND day_num >= '') OR day_num >= 3) 
+    // UNION SELECT * 
+    // FROM timetable 
+    // WHERE teacher_id = "TI" 
+    // LIMIT 1;`;
+    res.status(200).send('ok');
 });
 
 app.get('/day', (req, res) => {
-    // get all day
-    res.status(200).send('ok');
+    const day = req.query.day;
+    const teacher = req.query.teacher ?? '';
+    const classes = req.query.classes ?? '';
+    const classroom = req.query.classroom ?? '';
+
+    if (!day) {
+        res.status(400).send({ error: "Missing required parameter: 'day'"});
+        return;
+    };
+
+    const sql = `SELECT timetable.teacher_id, teachers.name AS teacher_name, subject, classes, classroom, day_num, lesson_num
+    FROM planbot.timetable
+    JOIN planbot.teachers ON timetable.teacher_id = teachers.id
+    WHERE
+        day_num = ?
+        AND (
+            LOWER(teacher_id) LIKE CONCAT('%', LOWER(?), '%') 
+            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(?), '%')
+        )
+        AND LOWER(classes) LIKE CONCAT('%', LOWER(?), '%')
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(?), '%');`;
+    con.query(sql, [day, teacher, teacher, classes, classroom], (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).send(result);
+        };
+    });
 });
 
 app.get('/teachers', (req, res) => {
@@ -94,8 +162,7 @@ async function startServer () {
         try {
             await parser.createTimetables();
             await initDatabaseData(parser.getTimetables(), parser.getBrokenTimetables());
-            // uncomment it later DEBUG TODO
-            // await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
+            await setSetting('timetable_generation_date', parser.getTimetableGenerationDate());
         } catch (err) {
             console.error("Error while updating the DB data", err);
             return;

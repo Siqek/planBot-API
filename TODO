@@ -1,5 +1,3 @@
 - optimize the createTimeTables function
 
-- endpoints
-
-- sql-template-tag
+- namedPlaceholders: true
