@@ -13,6 +13,7 @@ let con = mysql.createConnection({
     host: 'db',
     user: 'root',
     password: `${process.env.DB_PASSWORD}`,
+    namedPlaceholders: true,
 });
 
 app.use(cors());
@@ -42,17 +43,18 @@ app.get('/lesson', (req, res) => {
     FROM planbot.timetable
     JOIN planbot.teachers ON timetable.teacher_id = teachers.id
     WHERE
-        day_num = ?
-        AND lesson_num = ?
+        day_num = :day
+        AND lesson_num = :lesson
         AND (
-            LOWER(teacher_id) LIKE CONCAT('%', LOWER(?), '%') 
-            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(?), '%')
+            LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher), '%') 
+            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher), '%')
         )
-        AND LOWER(classes) LIKE CONCAT('%', LOWER(?), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(?), '%');`;
-    con.query(sql, [day, lesson, teacher, teacher, classes, classroom], (err, result, _) => {
+        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%');`;
+    con.query(sql, {day: day, lesson: lesson, teacher: teacher, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
         } else {
             res.status(200).send(result);
         };
@@ -60,17 +62,48 @@ app.get('/lesson', (req, res) => {
 });
 
 app.get('/lesson/next-available', (req, res) => {
-    // const day = req.query.day;
-    // const lesson = req.query.lesson;
-    // const sql = `SELECT * 
-    // FROM timetable
-    // JOIN teachers ON timetable.teacher_id = teachers.id
-    // WHERE teacher_id = '' AND ((lesson_num >= '' AND day_num >= '') OR day_num >= 3) 
-    // UNION SELECT * 
-    // FROM timetable 
-    // WHERE teacher_id = "TI" 
-    // LIMIT 1;`;
-    res.status(200).send('ok');
+    const day = req.query.day;
+    const lesson = req.query.lesson;
+    const teacher = req.query.teacher ?? '';
+    const classes = req.query.classes ?? '';
+    const classroom = req.query.classroom ?? '';
+
+    if (!day) {
+        res.status(400).send({ error: "Missing required parameter: 'day'"});
+        return;
+    };
+
+    if (!lesson) {
+        res.status(400).send({ error: "Missing required parameter: 'lesson'"});
+        return;
+    };
+
+    const sql = `SELECT * 
+    FROM planbot.timetable
+    JOIN planbot.teachers ON timetable.teacher_id = teachers.id
+    WHERE
+        (
+            LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher), '%')
+            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher),'%')
+        )
+        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%')
+        AND 
+        (
+            (lesson_num >= :lesson AND day_num >= :day)
+            OR day_num >= :day + 1
+        )
+    ORDER BY day_num, lesson_num
+    LIMIT 1;`;
+    con.query(sql, {day: day, lesson: lesson, teacher: teacher, classes: classes, classroom: classroom}, (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
+        } else {
+            console.log(sql)
+            res.status(200).send(result);
+        };
+    });
 });
 
 app.get('/day', (req, res) => {
@@ -88,16 +121,17 @@ app.get('/day', (req, res) => {
     FROM planbot.timetable
     JOIN planbot.teachers ON timetable.teacher_id = teachers.id
     WHERE
-        day_num = ?
+        day_num = :day
         AND (
-            LOWER(teacher_id) LIKE CONCAT('%', LOWER(?), '%') 
-            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(?), '%')
+            LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher), '%') 
+            OR LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher), '%')
         )
-        AND LOWER(classes) LIKE CONCAT('%', LOWER(?), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(?), '%');`;
-    con.query(sql, [day, teacher, teacher, classes, classroom], (err, result, _) => {
+        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%');`;
+    con.query(sql, {day: day, teacher: teacher, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
         } else {
             res.status(200).send(result);
         };
@@ -109,6 +143,7 @@ app.get('/teachers', (req, res) => {
     con.query(sql, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
         } else {
             res.status(200).json(result);
         };
@@ -120,6 +155,7 @@ app.get('/classes', (req, res) => {
     con.query(sql, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
         } else {
             res.status(200).json(result.map(r => r.class));
         };
@@ -131,6 +167,34 @@ app.get('/classrooms', (req, res) => {
     con.query(sql, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
+        } else {
+            res.status(200).json(result.map(r => r.classroom));
+        };
+    });
+});
+
+app.get('/classrooms/available', (req, res) => {
+    const day = req.query.day;
+    const lesson = req.query.lesson;
+
+    if (!day) {
+        res.status(400).send({ error: "Missing required parameter: 'day'"});
+        return;
+    };
+
+    if (!lesson) {
+        res.status(400).send({ error: "Missing required parameter: 'lesson'"});
+        return;
+    };
+
+    res.send(200).send('ok');
+    return;
+    const sql = `SELECT 'in progress'`;
+    con.query(sql, {day: day, lesson: lesson}, (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
         } else {
             res.status(200).json(result.map(r => r.classroom));
         };
