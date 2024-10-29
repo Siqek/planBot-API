@@ -16,7 +16,7 @@ jeżeli przy opisie znajduje się znak `*`, oznacza to dodatkowe uwagi do tego o
 
 [/classrooms](#classrooms)
 
-[/classrooms/available](#classroomsnext-available)
+[/classrooms/available](#classroomsavailable)
 
 [/lesson](#lesson)
 
