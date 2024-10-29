@@ -10,6 +10,20 @@ jeżeli przy opisie znajduje się znak `*`, oznacza to dodatkowe uwagi do tego o
 
 # Endpoints
 
+[/teachers](#teachers)
+
+[/classes](#classes)
+
+[/classrooms](#classrooms)
+
+[/classrooms/available](#classroomsnext-available)
+
+[/lesson](#lesson)
+
+[/lesson/next-available](#lessonnext-available)
+
+[/day](#day)
+
 ## /teachers
 
 ### Opis
@@ -73,7 +87,7 @@ Typ zwracanej odpowiedzi: `tablica` stringów
 ]
 ```
 
-## /classrooms/next-available
+## /classrooms/available
 
 ### Opis
 Zwraca listę wszystkich wolnych sal lekcyjnych o podanych parametrach
