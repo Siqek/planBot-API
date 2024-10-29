@@ -1,4 +1,4 @@
-# plabBot-API
+# PlanBot-API
 
 planbot-api na [docker hub](https://hub.docker.com/r/siqek/planbot-api)
 
