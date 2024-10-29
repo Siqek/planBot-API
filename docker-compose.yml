@@ -23,7 +23,7 @@ services:
       - db
    
   app:
-    image: planbot-api:0.1.0
+    image: planbot-api:1.0.0
     container_name: planbot-api
     environment:
       - url=${url}
