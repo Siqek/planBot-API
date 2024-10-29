@@ -23,7 +23,7 @@ services:
       - db
    
   app:
-    image: planbot-api:1.0.0
+    image: siqek/planbot-api:1.0.0
     container_name: planbot-api
     environment:
       - url=${url}
