@@ -6,9 +6,9 @@ planbot-api na [docker hub](https://hub.docker.com/r/siqek/planbot-api)
 
 [dodatkowe uwagi](#dodatkowe-uwagi)
 
-jeżeli przy opisie znajduje się znak `*`, oznacza to dodatkowe uwagi do tego opisu
+jeżeli obok opisu znajduje się symbol `*`, oznacza to, że istnieją dodatkowe uwagi do tego opisu
 
-# Endpoints
+# Endpointy
 
 [/teachers](#teachers)
 
@@ -30,7 +30,7 @@ jeżeli przy opisie znajduje się znak `*`, oznacza to dodatkowe uwagi do tego o
 Zwraca listę wszystkich nauczycieli
 
 ### Odpowiedź
-Typ zwracanej odpowiedzi: `tablica` obiektów 
+Typ zwracanej odpowiedzi: `lista obiektów`
 
 Pola zwróconego obiektu:
 - `id: string` - id nauczyciela
@@ -55,7 +55,7 @@ Pola zwróconego obiektu:
 Zwraca listę wszystkich oddziałów
 
 ### Odpowiedź
-Typ zwracanej odpowiedzi: `tablica` stringów
+Typ zwracanej odpowiedzi: `lista stringów`
 
 ### Przykładowa odpowiedź
 ```
@@ -75,7 +75,7 @@ Typ zwracanej odpowiedzi: `tablica` stringów
 Zwraca listę wszystkich sal lekcyjnych
 
 ### Odpowiedź
-Typ zwracanej odpowiedzi: `tablica` stringów
+Typ zwracanej odpowiedzi: `lista stringów`
 
 ### Przykładowa odpowiedź
 ```
@@ -122,7 +122,7 @@ Zwraca wszystkie wyniki o podanych parametrach
 - `classroom: string` (opcjonalnie) - sala lekcyjna
 
 ### Odpowiedź
-Typ zwracanej odpowiedzi: `tablica` obiektów
+Typ zwracanej odpowiedzi: `lista obiektów`
 
 Pola zwróconego obiektu:
 - `teacher_id: string`
@@ -154,7 +154,7 @@ Pola zwróconego obiektu:
 ## /lesson/next-available
 
 ### Opis
-Zwraca najbliższą dostępną lekcję (tego samego dnia lub w następnych dniach)
+Zwraca najbliższą dostępną lekcję (tego samego dnia lub w ciągu kolejnych dni)
 
 ### Parametry
 - `day: integer`* (wymagany) - numer dnia
@@ -163,6 +163,9 @@ Zwraca najbliższą dostępną lekcję (tego samego dnia lub w następnych dniac
 - `teacher_name: string` (opcjonalny) - nazwisko nauczyciela
 - `classes: string` (opcjonalnie) - oddział
 - `classroom: string` (opcjonalnie) - sala lekcyjna
+
+### Odpowiedź
+Typ zwracanej odpowiedzi: `lista z obiektem`
 
 ### Przykładowa odpowiedź
 ```
@@ -175,8 +178,7 @@ Zwraca najbliższą dostępną lekcję (tego samego dnia lub w następnych dniac
     "classroom": "203",
     "day_num": 0,
     "lesson_num": 0
-  },
-  ...
+  }
 ]
 ```
 
@@ -195,7 +197,7 @@ Zwraca wszystkie lekcje danego dnia zawierające dane podane w parametrach
 - `classroom: string` (opcjonalnie) - sala lekcyjna
 
 ### Odpowiedź
-Typ zwracanej odpowiedzi: `tablica` obiektów
+Typ zwracanej odpowiedzi: `lista obiektów`
 
 ### Przykładowa odpowiedź
 ```
@@ -219,4 +221,4 @@ Typ zwracanej odpowiedzi: `tablica` obiektów
 
 `lesson` - indeksowane od 0
 
-pole `classes` jest stringiem ale jest to lista oddziałów (klas) oddzielonych znakiem `;`
+pole `classes` to `string`, który zawiera listą oddziałów (klas) rozdzielonych symbolem `;`
