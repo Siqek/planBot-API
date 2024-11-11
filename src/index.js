@@ -19,7 +19,7 @@ let con = mysql.createConnection({
 app.use(cors());
 
 app.get('/', (req, res) => {
-    res.send("OK");
+    res.status(200).send("OK");
 });
 
 app.get('/lesson', (req, res) => {
@@ -71,12 +71,12 @@ app.get('/lesson/next-available', (req, res) => {
     if (!day) {
         res.status(400).send({ error: "Missing required parameter: 'day'"});
         return;
-    };
+    }
 
     if (!lesson) {
         res.status(400).send({ error: "Missing required parameter: 'lesson'"});
         return;
-    };
+    }
 
     const sql = `SELECT teacher_id, teachers.name as teacher_name, classes, subject, classroom, day_num, lesson_num
     FROM planbot.timetable
@@ -91,16 +91,26 @@ app.get('/lesson/next-available', (req, res) => {
             (lesson_num >= :lesson AND day_num >= :day)
             OR day_num >= :day + 1
         )
-    ORDER BY day_num, lesson_num
-    LIMIT 1;`;
+    ORDER BY day_num, lesson_num;`;
     con.query(sql, {day: day, lesson: lesson, teacher_id: teacher_id, teacher_name: teacher_name, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
             console.error(err);
         } else {
-            console.log(sql)
-            res.status(200).send(result);
-        };
+            let filteredResult = [];
+
+            const day_num = result[0]?.day_num;
+            const lesson_num = result[0]?.lesson_num;
+
+            for (const row of result) {
+                if (row.day_num != day_num || row.lesson_num != lesson_num)
+                    break;
+
+                filteredResult.push(row);
+            }
+
+            res.status(200).send(filteredResult);
+        }
     });
 });
 
@@ -114,7 +124,7 @@ app.get('/day', (req, res) => {
     if (!day) {
         res.status(400).send({ error: "Missing required parameter: 'day'" });
         return;
-    };
+    }
 
     const sql = `SELECT timetable.teacher_id, teachers.name AS teacher_name, subject, classes, classroom, day_num, lesson_num
     FROM planbot.timetable
@@ -124,14 +134,15 @@ app.get('/day', (req, res) => {
         AND LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher_id), '%') 
         AND LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher_name), '%')
         AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%');`;
+        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%')
+    ORDER BY lesson_num;`;
     con.query(sql, {day: day, teacher_id: teacher_id, teacher_name: teacher_name, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
             console.error(err);
         } else {
             res.status(200).send(result);
-        };
+        }
     });
 });
 
