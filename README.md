@@ -8,6 +8,8 @@ planbot-api na [docker hub](https://hub.docker.com/r/siqek/planbot-api)
 
 jeżeli obok opisu znajduje się symbol `*`, oznacza to, że istnieją dodatkowe uwagi do tego opisu
 
+> note: parametry typu `string` obsługują wildcardy (symbol `%`)
+
 # Endpointy
 
 [/teachers](#teachers)
