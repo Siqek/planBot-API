@@ -25,10 +25,10 @@ app.get('/', (req, res) => {
 app.get('/lesson', (req, res) => {
     const day = req.query.day;
     const lesson = req.query.lesson;
-    const teacher_id = req.query.teacher_id ?? '';
-    const teacher_name = req.query.teacher_name ?? '';
-    const classes = req.query.classes ?? '';
-    const classroom = req.query.classroom ?? '';
+    const teacher_id = req.query.teacher_id ?? '%';
+    const teacher_name = req.query.teacher_name ?? '%';
+    const classes = req.query.classes ?? '%';
+    const classroom = req.query.classroom ?? '%';
 
     if (!day) {
         res.status(400).send({ error: "Missing required parameter: 'day'" });
@@ -46,10 +46,10 @@ app.get('/lesson', (req, res) => {
     WHERE
         day_num = :day
         AND lesson_num = :lesson
-        AND LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher_id), '%') 
-        AND LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher_name), '%')
-        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%');`;
+        AND LOWER(teacher_id) LIKE LOWER(:teacher_id)
+        AND LOWER(teachers.name) LIKE LOWER(:teacher_name)
+        AND LOWER(classes) LIKE LOWER(:classes)
+        AND LOWER(classroom) LIKE LOWER(:classroom);`;
     con.query(sql, {day: day, lesson: lesson, teacher_id: teacher_id, teacher_name: teacher_name, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
             res.status(500).json({ error: 'Internal server error' });
@@ -63,10 +63,10 @@ app.get('/lesson', (req, res) => {
 app.get('/lesson/next-available', (req, res) => {
     const day = req.query.day;
     const lesson = req.query.lesson;
-    const teacher_id = req.query.teacher_id ?? '';
-    const teacher_name = req.query.teacher_name ?? '';
-    const classes = req.query.classes ?? '';
-    const classroom = req.query.classroom ?? '';
+    const teacher_id = req.query.teacher_id ?? '%';
+    const teacher_name = req.query.teacher_name ?? '%';
+    const classes = req.query.classes ?? '%';
+    const classroom = req.query.classroom ?? '%';
 
     if (!day) {
         res.status(400).send({ error: "Missing required parameter: 'day'"});
@@ -82,11 +82,11 @@ app.get('/lesson/next-available', (req, res) => {
     FROM planbot.timetable
     JOIN planbot.teachers ON timetable.teacher_id = teachers.id
     WHERE
-        LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher_id), '%')
-        AND LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher_name),'%')
-        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%')
-        AND 
+        LOWER(teacher_id) LIKE LOWER(:teacher_id)
+        AND LOWER(teachers.name) LIKE LOWER(:teacher_name)
+        AND LOWER(classes) LIKE LOWER(:classes)
+        AND LOWER(classroom) LIKE LOWER(:classroom)
+        AND
         (
             (lesson_num >= :lesson AND day_num >= :day)
             OR day_num >= :day + 1
@@ -116,10 +116,10 @@ app.get('/lesson/next-available', (req, res) => {
 
 app.get('/day', (req, res) => {
     const day = req.query.day;
-    const teacher_id = req.query.teacher_id ?? '';
-    const teacher_name = req.query.teacher_name ?? '';
-    const classes = req.query.classes ?? '';
-    const classroom = req.query.classroom ?? '';
+    const teacher_id = req.query.teacher_id ?? '%';
+    const teacher_name = req.query.teacher_name ?? '%';
+    const classes = req.query.classes ?? '%';
+    const classroom = req.query.classroom ?? '%';
 
     if (!day) {
         res.status(400).send({ error: "Missing required parameter: 'day'" });
@@ -131,10 +131,10 @@ app.get('/day', (req, res) => {
     JOIN planbot.teachers ON timetable.teacher_id = teachers.id
     WHERE
         day_num = :day
-        AND LOWER(teacher_id) LIKE CONCAT('%', LOWER(:teacher_id), '%') 
-        AND LOWER(teachers.name) LIKE CONCAT('%', LOWER(:teacher_name), '%')
-        AND LOWER(classes) LIKE CONCAT('%', LOWER(:classes), '%')
-        AND LOWER(classroom) LIKE CONCAT('%', LOWER(:classroom), '%')
+        AND LOWER(teacher_id) LIKE LOWER(:teacher_id)
+        AND LOWER(teachers.name) LIKE LOWER(:teacher_name)
+        AND LOWER(classes) LIKE LOWER(:classes)
+        AND LOWER(classroom) LIKE LOWER(:classroom)
     ORDER BY lesson_num;`;
     con.query(sql, {day: day, teacher_id: teacher_id, teacher_name: teacher_name, classes: classes, classroom: classroom}, (err, result, _) => {
         if (err) {
@@ -196,10 +196,10 @@ app.get('/classrooms/available', (req, res) => {
         return;
     };
 
-    const sql = `SELECT DISTINCT t1.classroom 
+    const sql = `SELECT DISTINCT t1.classroom
     FROM planbot.timetable t1
-    LEFT JOIN planbot.timetable t2 
-        ON t1.classroom = t2.classroom 
+    LEFT JOIN planbot.timetable t2
+        ON t1.classroom = t2.classroom
         AND t2.lesson_num = :lesson
         AND t2.day_num = :day
     WHERE t2.classroom IS NULL;`;
@@ -245,7 +245,7 @@ async function startServer () {
         };
     };
 
-    app.listen(port, () => console.log(`API works! Listening to port ${port}`)); 
+    app.listen(port, () => console.log(`API works! Listening to port ${port}`));
 };
 
 
@@ -286,7 +286,7 @@ async function initDatabaseStructure () {
         // create table: teachers
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`teachers\` (
             \`id\`            CHAR(2)         PRIMARY KEY NOT NULL UNIQUE,
-            \`name\`          VARCHAR(30)     NOT NULL   
+            \`name\`          VARCHAR(30)     NOT NULL
         );`;
         await con.promise().query(sql);
 
@@ -295,7 +295,7 @@ async function initDatabaseStructure () {
             \`class\`         VARCHAR(4)      PRIMARY KEY NOT NULL UNIQUE
         );`;
         await con.promise().query(sql);
-        
+
         // create table: timetable
         sql = `CREATE TABLE IF NOT EXISTS \`planbot\`.\`timetable\` (
             \`id\`            INT             PRIMARY KEY NOT NULL AUTO_INCREMENT,
@@ -324,7 +324,7 @@ async function initDatabaseStructure () {
 
 async function initDatabaseData (data, brokenData) {
     // truncate old data and insert new
-    try {   
+    try {
         // truncate old data
         let sql = `TRUNCATE \`planbot\`.\`broken_timetable\`;`;
         await con.promise().query(sql);
@@ -370,7 +370,7 @@ async function initDatabaseData (data, brokenData) {
 
         // insert the data
         sql = `INSERT INTO \`planbot\`.\`timetable\`
-        (\`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`) 
+        (\`teacher_id\`, \`classes\`, \`subject\`, \`classroom\`, \`day_num\`, \`lesson_num\`)
         VALUES ?;`;
         if (values.length) {
             let [ result ] = await con.promise().query(sql, [values]);
