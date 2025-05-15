@@ -16,6 +16,8 @@ jeżeli obok opisu znajduje się symbol `*`, oznacza to, że istnieją dodatkowe
 
 [/classes](#classes)
 
+[/class/exists/:class](#classexistsclass)
+
 [/classrooms](#classrooms)
 
 [/classrooms/available](#classroomsavailable)
@@ -67,6 +69,26 @@ Typ zwracanej odpowiedzi: `lista stringów`
   "3OPW",
   ...
 ]
+```
+
+---
+
+## /class/exists/:class
+
+### Opis
+Zwraca obiekt informujący czy dany oddział istnieje
+
+### Odpowiedź
+Typ zwracanej odpowiedzi: `obiekt`
+
+Pola zwracanego obiektu:
+- `exists: boolean(int)` - czy dany oddział istnieje (warotść 1 jeżeli istnieje, w przeciwnym razie 0)
+
+### Przykładowa odpowiedź
+```
+{
+  "exists": 1
+}
 ```
 
 ---
