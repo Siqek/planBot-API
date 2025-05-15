@@ -25,7 +25,7 @@ services:
     # build:
     #   context: .
     #   dockerfile: Dockerfile
-    image: siqek/planbot-api:1.1.0
+    image: siqek/planbot-api:1.2.0
     container_name: planbot-api
     environment:
       - url=${url}
