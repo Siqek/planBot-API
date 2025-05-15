@@ -170,6 +170,20 @@ app.get('/classes', (req, res) => {
     });
 });
 
+app.get('/classes/exists/:class', (req, res) => {
+    const { class: className } = req.params;
+
+    const sql = `SELECT count(*) as \"exists\" FROM planbot.classes WHERE class = :class;`;
+    con.query(sql, { class: className }, (err, result, _) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+            console.error(err);
+        } else {
+            res.status(200).json(result[0]);
+        }
+    })
+});
+
 app.get('/classrooms', (req, res) => {
     const sql = `SELECT DISTINCT \`classroom\` FROM \`planbot\`.\`timetable\`;`;
     con.query(sql, (err, result, _) => {
